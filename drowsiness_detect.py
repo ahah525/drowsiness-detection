@@ -9,10 +9,14 @@ import pygame #For playing sound
 import time
 import dlib
 import cv2
+import matplotlib.pyplot as plt
+from datetime import datetime
 
-#Initialize Pygame and load music
+#Initialize Pygame and load music(wav 파일 지원)
 pygame.mixer.init()     #믹서 모듈의 초기화 함수
 pygame.mixer.music.load('audio/alert.wav')  #음악 로딩
+guideSound = pygame.mixer.Sound("audio/start_guide_wav.wav")   # 안내 음성
+video_file = "./video/eye_test.mp4"
 
 #Minimum threshold of eye aspect ratio below which alarm is triggerd
 #눈의 EAR의 THRESH 기본값을 0.3으로 설정
@@ -24,7 +28,8 @@ MOUTH_THRESHOLD = 0.37
 HEAD_DOWN_THRESHOLD = 0.3
 
 #Minimum consecutive frames for which eye ratio is below threshold for alarm to be triggered
-EYE_ASPECT_RATIO_CONSEC_FRAMES = 20
+EYE_ASPECT_RATIO_CONSEC_FRAMES = 10
+
 
 #COunts no. of consecutuve frames below threshold value
 #프레임 카운터(눈) 초기화
@@ -84,11 +89,45 @@ predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
 #Start webcam video capture
 #첫번째(0) 카메라를 VideoCapture 타입의 객체로 얻어옴
 video_capture = cv2.VideoCapture(0)
+#video_capture = cv2.VideoCapture(video_file)
 
 #Give some time for camera to initialize(not required)
 time.sleep(2)
 
+
+# 현재시각
+currentTime = time.strftime("%Y%m%d_%H%M%S")
+outputFileName = "./output/" + currentTime + ".avi"
+
+# 웹캠의 속성 값을 받아오기
+# 정수 형태로 변환하기 위해 round
+w = round(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+h = round(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+fps = video_capture.get(cv2.CAP_PROP_FPS) # 카메라에 따라 값이 정상적, 비정상적
+
+print(fps) #30.0
+
+# fourcc 값 받아오기, *는 문자를 풀어쓰는 방식, *'DIVX' == 'D', 'I', 'V', 'X'
+fourcc = cv2.VideoWriter_fourcc(*'DIVX')
+
+# 1프레임과 다음 프레임 사이의 간격 설정
+delay = round(1000/fps)
+
+# 웹캠으로 찰영한 영상을 저장하기
+# cv2.VideoWriter 객체 생성, 기존에 받아온 속성값 입력
+out = cv2.VideoWriter(outputFileName, fourcc, fps/10, (w, h))
+
+X = 0
+
+
 START = False
+
+#실시간 그래프 그리기 위함
+plt.show()  #1번만 호출해야함
+plt.xticks(rotation=45) #x축 라벨 -45
+
+dataX=[]
+dataY=[]
 
 while(True):
     #Read each frame and flip it, and convert to grayscale
@@ -111,6 +150,10 @@ while(True):
         START = True
 
     if(START):
+        # 블랙박스처럼 현재 시각 나타내기
+        currentTime = time.strftime("%Y-%m-%d %H:%M:%S")
+        cv2.putText(frame, currentTime, (5, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
         # 얼굴 사각형 그리기
         # (x, y): 좌상단 위치, (w, h): 이미지 크기
         for (x, y, w, h) in face_rectangle:
@@ -201,9 +244,20 @@ while(True):
             if (headRate > HEAD_DOWN_THRESHOLD * 1.8):
                 cv2.putText(frame, "You are HEAD DOWN", (150, 400), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
 
+        # 실시간 그래프그리기
+        X += 1
+        dataX.append(X)
+        dataY.append(eyeAspectRatio)
+        # plt.scatter(X, eyeAspectRatio)
+        plt.plot(dataX, dataY)
+        plt.pause(0.000000001)
+
+    # 비디오 저장
+    out.write(frame)  # 영상 데이터만 저장. 소리는 X
+
     #Show video feed
     cv2.imshow('Video', frame)
-    
+
     #키보드 입력으로 중지시키기
     if(cv2.waitKey(1) & 0xFF == ord('q')):
         break

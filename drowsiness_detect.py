@@ -101,6 +101,9 @@ time.sleep(2)
 
 # 상태(0: 기기 부팅 초기상태, 1: s를 눌러 평상시 값 3개 측정 단계, 2: 측정 후 평균 구하는 단계, 3: 졸음 판별 단계)
 state = 0
+#졸음 단계(0:평상시 상태, 1: 졸음 전조 단계, 2: 졸음단계)
+DROWSINESS_STATE = 0
+
 
 # 현재시각
 currentTime = time.strftime("%Y%m%d_%H%M%S")
@@ -130,12 +133,10 @@ X = 0
 
 # 실시간 그래프 그리기 위함
 #plt.figure(1, [0,0])
-plt.show()  # 1번만 호출해야함
-plt.xticks(rotation=45)  # x축 라벨 -45
 
-
-dataX = []
-dataY = []
+# 그래프 그리기위한 값들을 담은 리스트
+#dataX = []
+dataY = [[], [], []]  #
 
 # 평균 값 측정을 위한 값들을 담아놓는 리스트
 eyeList = []
@@ -145,6 +146,9 @@ headList = []
 startTime = datetime.now()
 
 FRAME_COUNTER = 0   #프레임 카운터
+THIRD_FRAME = 0     #3단계 첫 시작 판별을 위한 카운터
+ax = [] # 그래프 여러개 그리기 위한 Axes
+graphTitle = ["eye", "mouth", "head"]
 
 while (True):
     # Read each frame and flip it, and convert to grayscale
@@ -245,9 +249,10 @@ while (True):
                 state = 2  # 측정값들의 평균(임계값) 구하는 단계
 
             if (state == 3):
+                THIRD_FRAME += 1
                 # Detect if eye aspect ratio is less than threshold
                 # 졸음판단(현재 EAR이 임계값보다 작은지 확인)
-                if (eyeAspectRatio < EYE_ASPECT_RATIO_THRESHOLD):
+                if (eyeAspectRatio < EYE_ASPECT_RATIO_THRESHOLD - 0.1):
                     # 임계값보다 EAR 작으면(눈 감고 있는 상태)
                     EYE_COUNTER += 1
                     # If no. of frames is greater than threshold frames,
@@ -274,11 +279,23 @@ while (True):
                     cv2.putText(frame, "You are HEAD DOWN", (150, 400), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
 
                 # 실시간 그래프그리기
-                X += 1
-                dataX.append(X)
-                dataY.append(eyeAspectRatio)
-                # plt.scatter(X, eyeAspectRatio)
-                plt.plot(dataX, dataY)
+                for i in range(0, 3):
+                    if(THIRD_FRAME == 1):
+                        ax.append(plt.subplot(2, 2, i+1))   # 그래프 추가(행, 열, 위치)
+                        plt.title(graphTitle[i])    # 그래프 제목
+                        plt.xticks(rotation=45)  # x축 라벨 -45
+                    X += 1
+                    if(i == 0):
+                        data = eyeAspectRatio #눈
+                    if(i == 1):
+                        data = mouthRate #입
+                    if(i == 2):
+                        data = headRate #고개숙임
+                    dataY[i].append(data) # 데이터 넣기
+                    # plt.scatter(X, eyeAspectRatio)
+                    ax[i].plot(dataY[i])
+
+                plt.tight_layout()  #그래프 겹치지 않게 Axes 조절
                 plt.pause(0.000000001)
             elif (state == 1):
                 cv2.rectangle(frame, (200, 10), (250, 40), (0, 0, 255), 2)
@@ -310,7 +327,9 @@ while (True):
 
     # 키보드 입력으로 중지시키기
     if (cv2.waitKey(1) == ord('q')):
+        state = 4 #종료단계
         plt.savefig(outputImageName)    #그래프 이미지 저장
+        #plt.show()
         break
 
 # Finally when video capture is over, release the video capture and destroyAllWindows

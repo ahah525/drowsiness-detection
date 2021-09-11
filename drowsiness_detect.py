@@ -29,6 +29,8 @@ HEAD_DOWN_THRESHOLD = 0.3
 
 # Minimum consecutive frames for which eye ratio is below threshold for alarm to be triggered
 EYE_ASPECT_RATIO_CONSEC_FRAMES = 10
+MOUTH_FRAMES = 10
+TUNING_FRAMES = 20
 
 # COunts no. of consecutuve frames below threshold value
 # 프레임 카운터(눈) 초기화
@@ -245,7 +247,7 @@ while (True):
             diffTime = nowTime - startTime  # 측정 시간
             """
             # 20프레임 값 측정 후
-            if (state == 1 and FRAME_COUNTER >= 20):
+            if (state == 1 and FRAME_COUNTER >= TUNING_FRAMES):
                 state = 2  # 측정값들의 평균(임계값) 구하는 단계
 
             if (state == 3):
@@ -269,7 +271,7 @@ while (True):
                 if (mouthRate > MOUTH_THRESHOLD * 2):
                     COUNTER_MOUTH += 1
                     # 10 프레임 연속 조건 충족 시, 하품 판단
-                    if (COUNTER_MOUTH >= 10):
+                    if (COUNTER_MOUTH >= MOUTH_FRAMES):
                         cv2.putText(frame, "You are Yawn", (150, 300), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
                 else:
                     COUNTER_MOUTH = 0

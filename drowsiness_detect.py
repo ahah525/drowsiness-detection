@@ -332,7 +332,7 @@ while (True):
                     # 연속 눈 감기(10Frame)
                     if(EYE_COUNTER > EYE_ASPECT_RATIO_CONSEC_FRAMES):
                         drowsiness_level = 2 # 졸음 단계로 변경
-                    elif(EYE_COUNTER == 0):
+                    elif(drowsiness_level == 2 and EYE_COUNTER == 0):
                         # 눈 감고 있다가 뜰 경우 바로 평상시 단계로 변경하기 위해
                         drowsiness_level = 0 # 평상시 단계로 변경
                     elif(eye_number >= EYE_STANDARD_NUMBER * 1.3):

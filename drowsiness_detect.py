@@ -20,19 +20,22 @@ tuningSound = pygame.mixer.Sound("audio/tuning_1.wav") #튜닝 음성
 
 # Minimum threshold of eye aspect ratio below which alarm is triggerd
 # 눈의 EAR의 THRESH 기본값을 0.3으로 설정
+eye_sum = 0
 # 졸음운전을 판단할 때 사용하는 임곗값(눈)
-EYE_ASPECT_RATIO_THRESHOLD = 0.3
+EYE_ASPECT_RATIO_THRESHOLD = 0
 # 하품을 판단할 때 사용하는 임곗값(입)
-MOUTH_THRESHOLD = 0.37
+MOUTH_THRESHOLD = 0
 # 고개숙임 판단 시 사용하는 임계값
-HEAD_DOWN_THRESHOLD = 0.3
+HEAD_DOWN_THRESHOLD = 0
+# 눈 깜빡임 기준 횟수
+EYE_STANDARD_NUMBER = 0
 
 # Minimum consecutive frames for which eye ratio is below threshold for alarm to be triggered
-EYE_ASPECT_RATIO_CONSEC_FRAMES = 10
-MOUTH_FRAMES = 10
-TUNING_FRAMES = 20
+EYE_ASPECT_RATIO_CONSEC_FRAMES = 10 # 연속 눈 감기 검출을 위한 기준 시간(프레임)
+MOUTH_FRAMES = 10       # 하품 검출위한 기준 시간(프레임)
+TUNING_FRAMES = 60      # 사용자별 튜닝 기준 시간
 EYE_STANDARD_TIME = 40  # 정상적인 눈깜빡임 빈도 계산을 위한 기준 시간
-EYE_STANDARD_NUMBER = 10 #
+
 
 #눈깜빡임 여부 리스트(0: 눈뜸, 눈감음)
 eye_numList = [0 for i in range(EYE_STANDARD_TIME)] #전부 0으로 초기화
@@ -250,19 +253,19 @@ while (True):
                         (200, 30, 20), 2)
 
             # 눈 EAR 표시
-            cv2.putText(frame, "EAR : {:.3f}".format(eyeAspectRatio), (0, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+            cv2.putText(frame, "EAR : {:.3f}/{:.3f}".format(eyeAspectRatio, EYE_ASPECT_RATIO_THRESHOLD), (0, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (200, 30, 20), 2)
 
             # 입 거리비 표시
-            cv2.putText(frame, "mouthRate : {:.3f}".format(mouthRate), (0, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+            cv2.putText(frame, "mouthRate : {:.3f}/{:.3f}".format(mouthRate, MOUTH_THRESHOLD), (0, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (200, 30, 20), 2)
 
             # 고개 숙임비 표시
-            cv2.putText(frame, "headRate : {:.3f}".format(headRate), (0, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+            cv2.putText(frame, "headRate : {:.3f}/{:.3f}".format(headRate, HEAD_DOWN_THRESHOLD), (0, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (200, 30, 20), 2)
             
             # 눈깜빡임 횟수 표시
-            cv2.putText(frame, "blink : {:d}".format(eye_number), (0, 160), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+            cv2.putText(frame, "blink : {:d}/{:.1f}".format(eye_number, EYE_STANDARD_NUMBER), (0, 160), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (200, 30, 20), 2)
             """
             nowTime = datetime.now()        # 현재 시각
@@ -307,7 +310,7 @@ while (True):
                 #print(eye_pattern)
 
                 # 정상적인 눈깜빡임 검출
-                if (eye_pattern[diffIdx - 1] < 0.8 * EYE_ASPECT_RATIO_THRESHOLD):
+                if (eye_pattern[diffIdx - 1] < 0.9 * EYE_ASPECT_RATIO_THRESHOLD):
                     EYE_COUNTER += 1
                     # 눈감았을 때 ear 값
                     eye_close = eye_pattern[diffIdx - 1]
@@ -332,7 +335,7 @@ while (True):
                     elif(EYE_COUNTER == 0):
                         # 눈 감고 있다가 뜰 경우 바로 평상시 단계로 변경하기 위해
                         drowsiness_level = 0 # 평상시 단계로 변경
-                    elif(eye_number >= EYE_STANDARD_NUMBER):
+                    elif(eye_number >= EYE_STANDARD_NUMBER * 1.3):
                         drowsiness_level = 1 # 졸음 전조 단계로 변경
 
 
@@ -388,9 +391,37 @@ while (True):
                 mouthList.append(round(mouthRate, 3))
                 headList.append(round(headRate, 3))
 
+                if (FRAME_COUNTER >= 2):
+                    now_idx = FRAME_COUNTER - 1
+
+                    # 증감율 계산
+                    eye_diff[0] = (eyeList[now_idx] - eyeList[now_idx - 1]) / eyeList[now_idx - 1]
+
+                    # 눈깜빡임 횟수 및 EAR 합계 구하기
+                    if (eye_diff[0] < -0.2):
+                        EYE_STANDARD_NUMBER += 1  # 눈 깜빡임 횟수 증가
+                    else:
+                        eye_sum += eyeList[now_idx] # ear 합계 구하기
+
             elif (state == 2):
+                """
+                # 눈깜빡인 값 제외하고 계산
+                for i in range(TUNING_FRAMES - 3):
+                    # 증감율 계산
+                    eye_diff[0] = (eyeList[i + 1] - eyeList[i])/ eyeList[i]
+                    eye_diff[1] = (eyeList[i + 2] - eyeList[i + 1])/ eyeList[i + 1]
+
+                    if (eye_diff[0] < -0.2):
+                        EYE_STANDARD_NUMBER += 1 # 눈 깜빡임 횟수 증가
+                    else:
+                        EYE_ASPECT_RATIO_THRESHOLD += eyeList[i + 1]
+                """
                 # 평균값(임계값 구하기)
-                EYE_ASPECT_RATIO_THRESHOLD = round(sum(eyeList) / len(eyeList), 3)
+                EYE_ASPECT_RATIO_THRESHOLD = round(eye_sum / (len(eyeList) - EYE_STANDARD_NUMBER), 3)
+                #EYE_ASPECT_RATIO_THRESHOLD = round(sum(eyeList) / len(eyeList), 3)
+                # 프레임수에 대한 눈깜빡임 수 구하기(튜닝시간:튜닝동안 눈깜빡임수 = 눈깜빡임 기준 시간:x)
+                EYE_STANDARD_NUMBER = round(EYE_STANDARD_NUMBER * EYE_STANDARD_TIME / TUNING_FRAMES, 1)
+
                 MOUTH_THRESHOLD = round(sum(mouthList) / len(mouthList), 3)
                 HEAD_DOWN_THRESHOLD = round(sum(headList) / len(headList), 3)
                 state = 3   # 졸음 판별 단계로 바꿈

@@ -11,12 +11,13 @@ import dlib
 import cv2
 import matplotlib.pyplot as plt
 from datetime import datetime
+import os
 
 # Initialize Pygame and load music(wav 파일 지원)
 pygame.mixer.init()  # 믹서 모듈의 초기화 함수
-pygame.mixer.music.load('audio/alert.wav')  # 음악 로딩
-guideSound = pygame.mixer.Sound("audio/start_guide_wav.wav")  # 안내 음성
-tuningSound = pygame.mixer.Sound("audio/tuning_1.wav")  # 튜닝 음성
+pygame.mixer.music.load(os.path.abspath('audio/alert.wav'))  # 음악 로딩
+guideSound = pygame.mixer.Sound(os.path.abspath("audio/start_guide_wav.wav"))  # 안내 음성
+tuningSound = pygame.mixer.Sound(os.path.abspath("audio/tuning_1.wav"))  # 튜닝 음성
 
 # Minimum threshold of eye aspect ratio below which alarm is triggerd
 # 눈의 EAR의 THRESH 기본값을 0.3으로 설정
@@ -57,7 +58,7 @@ COUNTER_MOUTH = 0
 
 # Load face cascade which will be used to draw a rectangle around detected faces.
 # 얼굴 인식: 정면 얼굴에 대한 Haar_Cascade 학습 데이터 (직사각형 그리는 용도)
-face_cascade = cv2.CascadeClassifier("haarcascades/haarcascade_frontalface_default.xml")
+face_cascade = cv2.CascadeClassifier(os.path.abspath("haarcascades/haarcascade_frontalface_default.xml"))
 
 
 # 눈 종횡비(EAR) 계산 함수
@@ -98,7 +99,7 @@ def head_rate(head):
 # Load face detector and predictor, uses dlib shape predictor file
 # 68개의 얼굴 랜드마크 추출
 detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
+predictor = dlib.shape_predictor(os.path.abspath('shape_predictor_68_face_landmarks.dat'))
 
 # Extract indexes of facial landmarks for the left and right eye
 # 위에서 추출한 랜드마크에서 왼쪽 눈과 오른쪽 눈의 랜드마크 좌표 추출
@@ -107,7 +108,7 @@ predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
 # 랜드마크에서 입 좌표 추출
 (mStart, mEnd) = 48, 68
 
-video_file = "./video/eye_test.mp4"
+#video_file = "./video/eye_test.mp4"
 # Start webcam video capture
 # 첫번째(0) 카메라를 VideoCapture 타입의 객체로 얻어옴\
 video_capture = cv2.VideoCapture(0)
@@ -117,6 +118,7 @@ video_capture = cv2.VideoCapture(0)
 # Give some time for camera to initialize(not required)
 time.sleep(2)
 
+user = 0
 # 상태(0: 기기 부팅 초기상태, 1: s를 눌러 평상시 값 3개 측정 단계, 2: 측정 후 평균 구하는 단계, 3: 졸음 판별 단계)
 state = 0
 # 졸음 단계(0:평상시 상태, 1: 졸음 전조 단계, 2: 졸음단계)
@@ -124,7 +126,7 @@ drowsiness_level = 0
 
 # 현재시각
 currentTime = time.strftime("%Y%m%d_%H%M%S")
-outputFileName = "./output/" + currentTime + ".avi"
+outputFileName = os.path.abspath("./output/" + currentTime + ".avi")
 outputImageName = "./graphImage/" + currentTime + ".png"
 
 # 웹캠의 속성 값을 받아오기

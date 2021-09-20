@@ -16,7 +16,7 @@ from datetime import datetime
 pygame.mixer.init()  # 믹서 모듈의 초기화 함수
 pygame.mixer.music.load('audio/alert.wav')  # 음악 로딩
 guideSound = pygame.mixer.Sound("audio/start_guide_wav.wav")  # 안내 음성
-tuningSound = pygame.mixer.Sound("audio/tuning_1.wav") #튜닝 음성
+tuningSound = pygame.mixer.Sound("audio/tuning_1.wav")  # 튜닝 음성
 
 # Minimum threshold of eye aspect ratio below which alarm is triggerd
 # 눈의 EAR의 THRESH 기본값을 0.3으로 설정
@@ -31,15 +31,14 @@ HEAD_DOWN_THRESHOLD = 0
 EYE_STANDARD_NUMBER = 0
 
 # Minimum consecutive frames for which eye ratio is below threshold for alarm to be triggered
-EYE_ASPECT_RATIO_CONSEC_FRAMES = 10 # 연속 눈 감기 검출을 위한 기준 시간(프레임)
-MOUTH_FRAMES = 10       # 하품 검출위한 기준 시간(프레임)
-TUNING_FRAMES = 60      # 사용자별 튜닝 기준 시간
+EYE_ASPECT_RATIO_CONSEC_FRAMES = 5  # 연속 눈 감기 검출을 위한 기준 시간(프레임)
+MOUTH_FRAMES = 10  # 하품 검출위한 기준 시간(프레임)
+TUNING_FRAMES = 60  # 사용자별 튜닝 기준 시간
 EYE_STANDARD_TIME = 40  # 정상적인 눈깜빡임 빈도 계산을 위한 기준 시간
 
-
-#눈깜빡임 여부 리스트(0: 눈뜸, 눈감음)
-eye_numList = [0 for i in range(EYE_STANDARD_TIME)] #전부 0으로 초기화
-eye_diff = [0 for i in range(2)] #전부 0으로 초기화
+# 눈깜빡임 여부 리스트(0: 눈뜸, 눈감음)
+eye_numList = [0 for i in range(EYE_STANDARD_TIME)]  # 전부 0으로 초기화
+eye_diff = [0 for i in range(2)]  # 전부 0으로 초기화
 # 눈깜빡임 패턴
 eye_pattern = [0 for i in range(3)]
 # 이전 EAR값
@@ -120,9 +119,8 @@ time.sleep(2)
 
 # 상태(0: 기기 부팅 초기상태, 1: s를 눌러 평상시 값 3개 측정 단계, 2: 측정 후 평균 구하는 단계, 3: 졸음 판별 단계)
 state = 0
-#졸음 단계(0:평상시 상태, 1: 졸음 전조 단계, 2: 졸음단계)
-drowsiness_level= 0
-
+# 졸음 단계(0:평상시 상태, 1: 졸음 전조 단계, 2: 졸음단계)
+drowsiness_level = 0
 
 # 현재시각
 currentTime = time.strftime("%Y%m%d_%H%M%S")
@@ -151,10 +149,10 @@ out = cv2.VideoWriter(outputFileName, fourcc, fps / 10, (w, h))
 X = 0
 
 # 실시간 그래프 그리기 위함
-#plt.figure(1, [0,0])
+# plt.figure(1, [0,0])
 
 # 그래프 그리기위한 값들을 담은 리스트
-#dataX = []
+# dataX = []
 dataY = [[], [], []]  #
 
 # 평균 값 측정을 위한 값들을 담아놓는 리스트
@@ -164,10 +162,13 @@ headList = []
 
 startTime = datetime.now()
 
-FRAME_COUNTER = 0   #프레임 카운터
-THIRD_FRAME = 0     #3단계 첫 시작 판별을 위한 카운터
-ax = [] # 그래프 여러개 그리기 위한 Axes
+FRAME_COUNTER = 0  # 프레임 카운터
+THIRD_FRAME = 0  # 3단계 첫 시작 판별을 위한 카운터
+ax = []  # 그래프 여러개 그리기 위한 Axes
 graphTitle = ["eye", "mouth", "head"]
+
+FIRST_YAWN = 0  # 첫 번째 하품
+SECOND_YAWN = 0 # 두 번째 하품
 
 while (True):
     # Read each frame and flip it, and convert to grayscale
@@ -253,20 +254,39 @@ while (True):
                         (200, 30, 20), 2)
 
             # 눈 EAR 표시
-            cv2.putText(frame, "EAR : {:.3f}/{:.3f}".format(eyeAspectRatio, EYE_ASPECT_RATIO_THRESHOLD), (0, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+            cv2.putText(frame, "EAR : {:.3f}/{:.3f}".format(eyeAspectRatio, EYE_ASPECT_RATIO_THRESHOLD), (0, 100),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (200, 30, 20), 2)
 
             # 입 거리비 표시
-            cv2.putText(frame, "mouthRate : {:.3f}/{:.3f}".format(mouthRate, MOUTH_THRESHOLD), (0, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+            cv2.putText(frame, "mouthRate : {:.3f}/{:.3f}".format(mouthRate, MOUTH_THRESHOLD), (0, 120),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (200, 30, 20), 2)
 
             # 고개 숙임비 표시
-            cv2.putText(frame, "headRate : {:.3f}/{:.3f}".format(headRate, HEAD_DOWN_THRESHOLD), (0, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+            cv2.putText(frame, "headRate : {:.3f}/{:.3f}".format(headRate, HEAD_DOWN_THRESHOLD), (0, 140),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (200, 30, 20), 2)
-            
+
             # 눈깜빡임 횟수 표시
-            cv2.putText(frame, "blink : {:d}/{:.1f}".format(eye_number, EYE_STANDARD_NUMBER), (0, 160), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+            cv2.putText(frame, "blink : {:d}/{:.1f}".format(eye_number, EYE_STANDARD_NUMBER), (0, 160),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (200, 30, 20), 2)
+
+
+
+            # # 현재 프레임 출력
+            # cv2.putText(frame, "THIRD_FRAME : {:d}".format(THIRD_FRAME), (0, 220), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+            #             (200, 30, 20), 2)
+            # # 첫 번째 하품을 한 시점의 프레임 출력
+            # cv2.putText(frame, "FIRST_YAWN : {:d}".format(FIRST_YAWN), (0, 240), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+            #             (200, 30, 20), 2)
+            # # 두 번째 하품을 한 시점의 프레임 출력
+            # cv2.putText(frame, "SECOND_YAWN : {:d}".format(SECOND_YAWN), (0, 260), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+            #             (200, 30, 20), 2)
+
+
+
             """
             nowTime = datetime.now()        # 현재 시각
             diffTime = nowTime - startTime  # 측정 시간
@@ -278,36 +298,36 @@ while (True):
             if (state == 3):
                 THIRD_FRAME += 1
                 frameIdx = (THIRD_FRAME - 1) % EYE_STANDARD_TIME
-                diffIdx = (THIRD_FRAME-1) % 3
+                diffIdx = (THIRD_FRAME - 1) % 3
                 # 실시간 그래프그리기
                 for i in range(0, 3):
-                    if(THIRD_FRAME == 1):
-                        ax.append(plt.subplot(2, 2, i+1))   # 그래프 추가(행, 열, 위치)
-                        plt.title(graphTitle[i])    # 그래프 제목
+                    if (THIRD_FRAME == 1):
+                        ax.append(plt.subplot(2, 2, i + 1))  # 그래프 추가(행, 열, 위치)
+                        plt.title(graphTitle[i])  # 그래프 제목
                         plt.xticks(rotation=45)  # x축 라벨 -45
                     X += 1
-                    if(i == 0):
-                        data = eyeAspectRatio #눈
-                        #prev_eyeRate = eyeAspectRatio
+                    if (i == 0):
+                        data = eyeAspectRatio  # 눈
+                        # prev_eyeRate = eyeAspectRatio
                         eye_pattern[diffIdx] = eyeAspectRatio
-                    if(i == 1):
-                        data = mouthRate #입
-                    if(i == 2):
-                        data = headRate #고개숙임
-                    dataY[i].append(data) # 데이터 넣기
+                    if (i == 1):
+                        data = mouthRate  # 입
+                    if (i == 2):
+                        data = headRate  # 고개숙임
+                    dataY[i].append(data)  # 데이터 넣기
                     # plt.scatter(X, eyeAspectRatio)
                     ax[i].plot(dataY[i])
 
-                plt.tight_layout()  #그래프 겹치지 않게 Axes 조절
+                plt.tight_layout()  # 그래프 겹치지 않게 Axes 조절
                 plt.pause(0.000000001)
 
                 # Detect if eye aspect ratio is less than threshold
                 # 졸음판단(현재 EAR이 임계값보다 작은지 확인)
                 # 정상적인 눈깜빡임 빈도(횟수) 계산(이전값2, 이전값1, 현재값)
-                if(THIRD_FRAME > 3):
+                if (THIRD_FRAME > 3):
                     eye_diff[0] = eye_pattern[diffIdx - 1] - eye_pattern[diffIdx - 2]
                     eye_diff[1] = eye_pattern[diffIdx] - eye_pattern[diffIdx - 1]
-                #print(eye_pattern)
+                # print(eye_pattern)
 
                 # 정상적인 눈깜빡임 검출
                 if (eye_pattern[diffIdx - 1] < 0.9 * EYE_ASPECT_RATIO_THRESHOLD):
@@ -316,38 +336,78 @@ while (True):
                     eye_close = eye_pattern[diffIdx - 1]
                     eye_close_ratio = round(eye_close / EYE_ASPECT_RATIO_THRESHOLD, 2)  # 눈을 감은 정도
 
-                    #cv2.putText(frame, "blink", (150, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
+                    # cv2.putText(frame, "blink", (150, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
                     # eye_numList[frameIdx] = 1 # 눈깜빡임이 일어나면 1로
-                    eye_numList[frameIdx] = eye_close_ratio # 눈 감은 정도(0~1: 0에 가까울 수록 많이 감은 것)
+                    eye_numList[frameIdx] = eye_close_ratio  # 눈 감은 정도(0~1: 0에 가까울 수록 많이 감은 것)
                 else:
                     EYE_COUNTER = 0
                     eye_numList[frameIdx] = 0  # 눈 뜸
 
-                eye_number = EYE_STANDARD_TIME - eye_numList.count(0) # 눈깜빡임 횟수 카운팅
+                eye_number = EYE_STANDARD_TIME - eye_numList.count(0)  # 눈깜빡임 횟수 카운팅
 
-                print(eye_numList)  # 기준 시간 내 눈을 몇번 얼마나 감았는지 기록
+                # print(eye_numList)  # 기준 시간 내 눈을 몇번 얼마나 감았는지 기록
 
                 # 졸음 단계 변경 부분(2프레임에 한번씩 검사)
-                if(THIRD_FRAME%2 == 0):
+                if (THIRD_FRAME % 2 == 0):
                     # 연속 눈 감기(10Frame)
-                    if(EYE_COUNTER > EYE_ASPECT_RATIO_CONSEC_FRAMES):
-                        drowsiness_level = 2 # 졸음 단계로 변경
-                    elif(drowsiness_level == 2 and EYE_COUNTER == 0):
+                    if (EYE_COUNTER > EYE_ASPECT_RATIO_CONSEC_FRAMES):
+                        print("눈감음")
+                        drowsiness_level = 2  # 졸음 단계로 변경
+                    elif (drowsiness_level == 2 and EYE_COUNTER == 0):
                         # 눈 감고 있다가 뜰 경우 바로 평상시 단계로 변경하기 위해
-                        drowsiness_level = 0 # 평상시 단계로 변경
-                    elif(eye_number >= EYE_STANDARD_NUMBER * 1.3):
-                        drowsiness_level = 1 # 졸음 전조 단계로 변경
+                        drowsiness_level = 0  # 평상시 단계로 변경
+                    elif (eye_number >= EYE_STANDARD_NUMBER * 1.3):
+                        drowsiness_level = 1  # 졸음 전조 단계로 변경
+
+
+
+
+###################################
+
+
+
+                if (mouthRate > MOUTH_THRESHOLD * 2):
+                    COUNTER_MOUTH += 1
+
+                    # 하품 조건을 만족하고 이미 첫 번째 하품을 한 상태라면 SECOND_YAWN 에 현재 프레임 입력
+                    if (COUNTER_MOUTH >= MOUTH_FRAMES and FIRST_YAWN != 0 and THIRD_FRAME - FIRST_YAWN > 200):
+                        SECOND_YAWN = THIRD_FRAME
+
+                    # 하품 조건을 만족하고 첫 번째 하품을 한 적이 없다면 FIRST_YAWN 에 현재 프레임 입력
+                    elif(COUNTER_MOUTH >= MOUTH_FRAMES and FIRST_YAWN == 0):
+                        FIRST_YAWN = THIRD_FRAME
+                else:
+                    COUNTER_MOUTH = 0
+
+
+                # 첫 번째 하품을 하고 나서 3분 이내에 두 번째 하품을 했다면 LEVEL 1
+                if(SECOND_YAWN - FIRST_YAWN > 200 and SECOND_YAWN - FIRST_YAWN < 3600):
+                    drowsiness_level = 1
+
+
+                # 첫 번째 하품을 한지 3분(3600프레임)이 지나고도 두 번째 하품을 하지 않는다면 FIRST_YAWN 은 0으로 초기화
+                if(THIRD_FRAME - FIRST_YAWN > 3600):
+                     FIRST_YAWN = 0
+
+
+
+
+###################################
+
+
+
+
 
 
                 # 졸음 단계별 사운드 조절
-                if(drowsiness_level == 0):
+                if (drowsiness_level == 0):
                     pygame.mixer.music.stop()  # 소리 출력 정지
-                elif(drowsiness_level == 1):
-                    #졸음 전조 단계이면
-                    #pygame.mixer.music.play(-1)
+                elif (drowsiness_level == 1):
+                    # 졸음 전조 단계이면
+                    # pygame.mixer.music.play(-1)
                     cv2.putText(frame, "1 LEVEL", (150, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
-                elif(drowsiness_level == 2):
-                    #졸음 단계 이면
+                elif (drowsiness_level == 2):
+                    # 졸음 단계 이면
                     pygame.mixer.music.play(-1)
                     cv2.putText(frame, "2 LEVEL", (150, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
 
@@ -383,7 +443,7 @@ while (True):
                 cv2.rectangle(frame, (200, 10), (250, 40), (0, 0, 255), 2)
                 cv2.putText(frame, "ing!".format(headRate), (200, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                             (0, 0, 255), 2)
-                tuningSound.play()   #측정 음성
+                tuningSound.play()  # 측정 음성
 
                 # 임계값 측정 단계이면
                 FRAME_COUNTER += 1  # 프레임 수 세기
@@ -401,7 +461,7 @@ while (True):
                     if (eye_diff[0] < -0.2):
                         EYE_STANDARD_NUMBER += 1  # 눈 깜빡임 횟수 증가
                     else:
-                        eye_sum += eyeList[now_idx] # ear 합계 구하기
+                        eye_sum += eyeList[now_idx]  # ear 합계 구하기
 
             elif (state == 2):
                 """
@@ -418,13 +478,13 @@ while (True):
                 """
                 # 평균값(임계값 구하기)
                 EYE_ASPECT_RATIO_THRESHOLD = round(eye_sum / (len(eyeList) - EYE_STANDARD_NUMBER), 3)
-                #EYE_ASPECT_RATIO_THRESHOLD = round(sum(eyeList) / len(eyeList), 3)
+                # EYE_ASPECT_RATIO_THRESHOLD = round(sum(eyeList) / len(eyeList), 3)
                 # 프레임수에 대한 눈깜빡임 수 구하기(튜닝시간:튜닝동안 눈깜빡임수 = 눈깜빡임 기준 시간:x)
                 EYE_STANDARD_NUMBER = round(EYE_STANDARD_NUMBER * EYE_STANDARD_TIME / TUNING_FRAMES, 1)
 
                 MOUTH_THRESHOLD = round(sum(mouthList) / len(mouthList), 3)
                 HEAD_DOWN_THRESHOLD = round(sum(headList) / len(headList), 3)
-                state = 3   # 졸음 판별 단계로 바꿈
+                state = 3  # 졸음 판별 단계로 바꿈
 
                 print(EYE_ASPECT_RATIO_THRESHOLD, MOUTH_THRESHOLD, HEAD_DOWN_THRESHOLD)
 
@@ -432,14 +492,14 @@ while (True):
     out.write(frame)  # 영상 데이터만 저장. 소리는 X
 
     # 비디오 보여주기
-    cv2.moveWindow(winname='Video', x=0, y=100) #특정 위치에 띄우기
+    cv2.moveWindow(winname='Video', x=0, y=100)  # 특정 위치에 띄우기
     cv2.imshow('Video', frame)
 
     # 키보드 입력으로 중지시키기
     if (cv2.waitKey(1) == ord('q')):
-        state = 4 #종료단계
-        plt.savefig(outputImageName)    #그래프 이미지 저장
-        #plt.show()
+        state = 4  # 종료단계
+        plt.savefig(outputImageName)  # 그래프 이미지 저장
+        # plt.show()
         break
 
 # Finally when video capture is over, release the video capture and destroyAllWindows

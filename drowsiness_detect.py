@@ -12,6 +12,9 @@ import cv2
 import matplotlib.pyplot as plt
 from datetime import datetime
 import os
+import pickle
+import tkinter as tk
+import tkinter.ttk
 
 # Initialize Pygame and load music(wav 파일 지원)
 pygame.mixer.init()  # 믹서 모듈의 초기화 함수
@@ -22,6 +25,7 @@ tuningSound = pygame.mixer.Sound(os.path.abspath("audio/tuning_1.wav"))  # 튜�
 # Minimum threshold of eye aspect ratio below which alarm is triggerd
 # 눈의 EAR의 THRESH 기본값을 0.3으로 설정
 eye_sum = 0
+"""
 # 졸음운전을 판단할 때 사용하는 임곗값(눈)
 EYE_ASPECT_RATIO_THRESHOLD = 0
 # 하품을 판단할 때 사용하는 임곗값(입)
@@ -30,6 +34,10 @@ MOUTH_THRESHOLD = 0
 HEAD_DOWN_THRESHOLD = 0
 # 눈 깜빡임 기준 횟수
 EYE_STANDARD_NUMBER = 0
+"""
+# 딕셔너리
+tuningDic = {"USER_ID": 0, "EYE_ASPECT_RATIO_THRESHOLD": 0, "MOUTH_THRESHOLD": 0, "HEAD_DOWN_THRESHOLD": 0, "EYE_STANDARD_NUMBER": 0}
+
 
 # Minimum consecutive frames for which eye ratio is below threshold for alarm to be triggered
 EYE_ASPECT_RATIO_CONSEC_FRAMES = 5  # 연속 눈 감기 검출을 위한 기준 시간(프레임)
@@ -95,6 +103,21 @@ def head_rate(head):
 
     return headRate
 
+# 파일에 userData 쓰기 함수
+def write_user_file(user_id):
+    # 파일에 쓰기
+    userFile = "./user_data/" + str(user_id) + ".txt"
+    with open(userFile, 'wb') as fw:
+        pickle.dump(tuningDic, fw)  # 값 추가
+        
+def read_user_file(user_id):
+    # 파일 읽기
+    userFile = "./user_data/" + str(user_id) + ".txt"
+    with open(userFile, 'rb') as fr:
+        tuningDic = pickle.load(fr)
+        #print(tuningDic)  # 읽어온 데이터
+        return tuningDic
+    return False
 
 # Load face detector and predictor, uses dlib shape predictor file
 # 68개의 얼굴 랜드마크 추출
@@ -108,11 +131,11 @@ predictor = dlib.shape_predictor(os.path.abspath('shape_predictor_68_face_landma
 # 랜드마크에서 입 좌표 추출
 (mStart, mEnd) = 48, 68
 
-#video_file = "./video/eye_test.mp4"
+video_file = "./video/test5.mp4"
 # Start webcam video capture
 # 첫번째(0) 카메라를 VideoCapture 타입의 객체로 얻어옴\
-video_capture = cv2.VideoCapture(0)
-# video_capture = cv2.VideoCapture(video_file)
+#video_capture = cv2.VideoCapture(0)
+video_capture = cv2.VideoCapture(video_file)
 
 
 # Give some time for camera to initialize(not required)
@@ -172,7 +195,66 @@ graphTitle = ["eye", "mouth", "head"]
 FIRST_YAWN = 0  # 첫 번째 하품
 SECOND_YAWN = 0 # 두 번째 하품
 
+userNum = len(os.listdir(os.path.abspath("./user_data")))  # 등록된 사용자 수
+
+######################################
+# gui 생성 부분
+def clickEnrollBtn(user_id):
+    print(user_id)
+    global state    # 전역변수 접근
+    state = 1  # 시작 상태로 변경
+    guideSound.play()  # 안내음성 출력
+    time.sleep(5)
+    global startTime
+    startTime = datetime.now()  # 현재 시각 저장
+
+"""
+app = tk.Tk()           #GUI 생성
+app.title("drowsiness-detection") #상단의 타이틀 지정
+app.geometry('300x300') #크기 설정(w * h)
+app.resizable(False, False)
+
+notebook=tkinter.ttk.Notebook(app, width=300, height=300)
+notebook.pack()
+
+frame1=tkinter.Frame(app)
+notebook.add(frame1, text="등록")
+
+# command에 인수 전달
+btn = tk.Button(app, text="본인", width=5, command=lambda:clickEnrollBtn(0))    # 윈도우에 버튼 생성
+btn.place(x=120, y=40)   # 윈도우 상 절대위치에 배치
+
+btn = tk.Button(app, text="사용자1", width=5, command=lambda:clickEnrollBtn(1))    # 윈도우에 버튼 생성
+btn.place(x=120, y=80)   # 윈도우 상 절대위치에 배치
+
+btn = tk.Button(app, text="사용자2", width=5, command=lambda:clickEnrollBtn(2))    # 윈도우에 버튼 생성
+btn.place(x=120, y=120)   # 윈도우 상 절대위치에 배치
+
+frame2=tkinter.Frame(app)
+notebook.add(frame2, text="시작")
+
+label2=tkinter.Label(frame2, text="페이지2의 내용")
+label2.pack()
+
+#app.mainloop()
+"""
+
+"""
+app = tk.Tk()           #GUI 생성
+app.title("drowsiness-detection") #상단의 타이틀 지정
+app.geometry('300x300') #크기 설정(w * h)
+
+enrollButton = tk.Button(app, text="등록", width=5)    # 윈도우에 버튼 생성
+enrollButton.place(x=0, y=0)   # 윈도우 상 절대위치에 배치
+
+buttonE = tk.Button(app, text="시작", width=5)
+buttonE.place(x=50, y=0)
+
+"""
+
 while (True):
+
+    print(state)
     # Read each frame and flip it, and convert to grayscale
     # ret : frame capture결과(boolean)
     # frame : Capture한 frame
@@ -194,11 +276,29 @@ while (True):
 
     # 키보드 입력으로 시작하기
     if (state == 0):
-        if (cv2.waitKey(1) == ord('s')):
-            state = 1  # 시작 상태로 변경
-            guideSound.play()  # 안내음성 출력
-            time.sleep(5)
-            startTime = datetime.now()  # 현재 시각 저장
+        # 등록된 사용자가 0명일 경우
+        if(userNum == 0):
+            # s버튼을 누르면 튜닝 단계로
+            if (cv2.waitKey(1) == ord('s')):
+                state = 1  # 시작 상태로 변경
+                guideSound.play()  # 안내음성 출력
+                time.sleep(5)
+                startTime = datetime.now()  # 현재 시각 저장
+        else:
+        # 등록된 사용자가 1명이상일 경우,
+            #user_id = input()
+            user_id = 0
+            # 해당 사용자(user_id)에 대응하는 데이터 파일 읽기
+            tuningDic = read_user_file(user_id)
+            state = 3  # 바로 졸음 판별 상태로 바꾸기
+
+            """
+            userFile = "./user_data/" + str(user_id) + ".txt"
+            with open(userFile, 'rb') as fr:
+                tuningDic = pickle.load(fr)
+                state = 3       # 바로 졸음 판별 상태로 바꾸기
+                print(tuningDic)    # 읽어온 데이터
+            """
 
     if (state != 0):
         """
@@ -250,28 +350,29 @@ while (True):
             # 입 경계선 그리기
             cv2.drawContours(frame, [innerMouthHull], -1, (0, 255, 0), 1)
 
+            print(tuningDic)  # 읽어온 데이터
             # 좌측 상단 기준 text 표시
             # 상태 표시
-            cv2.putText(frame, "drowsy_level : {:d}".format(drowsiness_level), (0, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+            cv2.putText(frame, "drowsy_level : {:d}".format(drowsiness_level+1), (0, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (200, 30, 20), 2)
 
             # 눈 EAR 표시
-            cv2.putText(frame, "EAR : {:.3f}/{:.3f}".format(eyeAspectRatio, EYE_ASPECT_RATIO_THRESHOLD), (0, 100),
+            cv2.putText(frame, "EAR : {:.3f}/{:.3f}".format(eyeAspectRatio, tuningDic["EYE_ASPECT_RATIO_THRESHOLD"]), (0, 100),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (200, 30, 20), 2)
 
             # 입 거리비 표시
-            cv2.putText(frame, "mouthRate : {:.3f}/{:.3f}".format(mouthRate, MOUTH_THRESHOLD), (0, 120),
+            cv2.putText(frame, "mouthRate : {:.3f}/{:.3f}".format(mouthRate, tuningDic["MOUTH_THRESHOLD"]), (0, 120),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (200, 30, 20), 2)
 
             # 고개 숙임비 표시
-            cv2.putText(frame, "headRate : {:.3f}/{:.3f}".format(headRate, HEAD_DOWN_THRESHOLD), (0, 140),
+            cv2.putText(frame, "headRate : {:.3f}/{:.3f}".format(headRate, tuningDic["HEAD_DOWN_THRESHOLD"]), (0, 140),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (200, 30, 20), 2)
 
             # 눈깜빡임 횟수 표시
-            cv2.putText(frame, "blink : {:d}/{:.1f}".format(eye_number, EYE_STANDARD_NUMBER), (0, 160),
+            cv2.putText(frame, "blink : {:d}/{:.1f}".format(eye_number, tuningDic["EYE_STANDARD_NUMBER"]), (0, 160),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (200, 30, 20), 2)
 
@@ -301,6 +402,7 @@ while (True):
                 THIRD_FRAME += 1
                 frameIdx = (THIRD_FRAME - 1) % EYE_STANDARD_TIME
                 diffIdx = (THIRD_FRAME - 1) % 3
+
                 # 실시간 그래프그리기
                 for i in range(0, 3):
                     if (THIRD_FRAME == 1):
@@ -332,11 +434,11 @@ while (True):
                 # print(eye_pattern)
 
                 # 정상적인 눈깜빡임 검출
-                if (eye_pattern[diffIdx - 1] < 0.9 * EYE_ASPECT_RATIO_THRESHOLD):
+                if (eye_pattern[diffIdx - 1] < 0.9 * tuningDic["EYE_ASPECT_RATIO_THRESHOLD"]):
                     EYE_COUNTER += 1
                     # 눈감았을 때 ear 값
                     eye_close = eye_pattern[diffIdx - 1]
-                    eye_close_ratio = round(eye_close / EYE_ASPECT_RATIO_THRESHOLD, 2)  # 눈을 감은 정도
+                    eye_close_ratio = round(eye_close / tuningDic["EYE_ASPECT_RATIO_THRESHOLD"], 2)  # 눈을 감은 정도
 
                     # cv2.putText(frame, "blink", (150, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
                     # eye_numList[frameIdx] = 1 # 눈깜빡임이 일어나면 1로
@@ -358,7 +460,7 @@ while (True):
                     elif (drowsiness_level == 2 and EYE_COUNTER == 0):
                         # 눈 감고 있다가 뜰 경우 바로 평상시 단계로 변경하기 위해
                         drowsiness_level = 0  # 평상시 단계로 변경
-                    elif (eye_number >= EYE_STANDARD_NUMBER * 1.3):
+                    elif (eye_number >= tuningDic["EYE_STANDARD_NUMBER"] * 1.3):
                         drowsiness_level = 1  # 졸음 전조 단계로 변경
 
 
@@ -368,7 +470,7 @@ while (True):
 
 
 
-                if (mouthRate > MOUTH_THRESHOLD * 2):
+                if (mouthRate > tuningDic["MOUTH_THRESHOLD"] * 2):
                     COUNTER_MOUTH += 1
 
                     # 하품 조건을 만족하고 이미 첫 번째 하품을 한 상태라면 SECOND_YAWN 에 현재 프레임 입력
@@ -407,11 +509,11 @@ while (True):
                 elif (drowsiness_level == 1):
                     # 졸음 전조 단계이면
                     # pygame.mixer.music.play(-1)
-                    cv2.putText(frame, "1 LEVEL", (150, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
+                    cv2.putText(frame, "2 LEVEL", (150, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
                 elif (drowsiness_level == 2):
                     # 졸음 단계 이면
                     pygame.mixer.music.play(-1)
-                    cv2.putText(frame, "2 LEVEL", (150, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
+                    cv2.putText(frame, "3 LEVEL", (150, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
 
                 """
                 if (eyeAspectRatio < EYE_ASPECT_RATIO_THRESHOLD * 0.9):
@@ -461,7 +563,7 @@ while (True):
 
                     # 눈깜빡임 횟수 및 EAR 합계 구하기
                     if (eye_diff[0] < -0.2):
-                        EYE_STANDARD_NUMBER += 1  # 눈 깜빡임 횟수 증가
+                        tuningDic["EYE_STANDARD_NUMBER"] += 1  # 눈 깜빡임 횟수 증가
                     else:
                         eye_sum += eyeList[now_idx]  # ear 합계 구하기
 
@@ -478,6 +580,7 @@ while (True):
                     else:
                         EYE_ASPECT_RATIO_THRESHOLD += eyeList[i + 1]
                 """
+                """
                 # 평균값(임계값 구하기)
                 EYE_ASPECT_RATIO_THRESHOLD = round(eye_sum / (len(eyeList) - EYE_STANDARD_NUMBER), 3)
                 # EYE_ASPECT_RATIO_THRESHOLD = round(sum(eyeList) / len(eyeList), 3)
@@ -486,9 +589,25 @@ while (True):
 
                 MOUTH_THRESHOLD = round(sum(mouthList) / len(mouthList), 3)
                 HEAD_DOWN_THRESHOLD = round(sum(headList) / len(headList), 3)
+                """
                 state = 3  # 졸음 판별 단계로 바꿈
 
-                print(EYE_ASPECT_RATIO_THRESHOLD, MOUTH_THRESHOLD, HEAD_DOWN_THRESHOLD)
+                #print(EYE_ASPECT_RATIO_THRESHOLD, MOUTH_THRESHOLD, HEAD_DOWN_THRESHOLD)
+
+                # 딕셔너리에 저장
+                tuningDic["HEAD_DOWN_THRESHOLD"] = round(sum(headList) / len(headList), 3)
+                tuningDic["MOUTH_THRESHOLD"] = round(sum(mouthList) / len(mouthList), 3)
+                tuningDic["EYE_STANDARD_NUMBER"] = round(tuningDic["EYE_STANDARD_NUMBER"] * EYE_STANDARD_TIME / TUNING_FRAMES, 1)
+                tuningDic["EYE_ASPECT_RATIO_THRESHOLD"] = round(eye_sum / (len(eyeList) - tuningDic["EYE_STANDARD_NUMBER"]), 3)
+                tuningDic["USER_ID"] = 0 #0번
+
+                # 파일에 쓰기
+                write_user_file(tuningDic["USER_ID"])
+                """
+                userFile = "./user_data/" + str(tuningDic["USER_ID"]) + ".txt"
+                with open(userFile, 'wb') as fw:
+                    pickle.dump(tuningDic, fw)  # 값 추가
+                """
 
     # 비디오 저장
     out.write(frame)  # 영상 데이터만 저장. 소리는 X
@@ -497,12 +616,16 @@ while (True):
     cv2.moveWindow(winname='Video', x=0, y=100)  # 특정 위치에 띄우기
     cv2.imshow('Video', frame)
 
+    #app.mainloop()
+
     # 키보드 입력으로 중지시키기
     if (cv2.waitKey(1) == ord('q')):
         state = 4  # 종료단계
         plt.savefig(outputImageName)  # 그래프 이미지 저장
         # plt.show()
         break
+
+
 
 # Finally when video capture is over, release the video capture and destroyAllWindows
 video_capture.release()

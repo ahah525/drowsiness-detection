@@ -16,11 +16,13 @@ import pickle
 import tkinter as tk
 import tkinter.ttk
 
+# exe 실행시: ../ #파이참 실행시:
+BASE_PATH = ""
 # Initialize Pygame and load music(wav 파일 지원)
 pygame.mixer.init()  # 믹서 모듈의 초기화 함수
-pygame.mixer.music.load(os.path.abspath('audio/alert.wav'))  # 음악 로딩
-guideSound = pygame.mixer.Sound(os.path.abspath("audio/start_guide_wav.wav"))  # 안내 음성
-tuningSound = pygame.mixer.Sound(os.path.abspath("audio/tuning_1.wav"))  # 튜닝 음성
+pygame.mixer.music.load(os.path.abspath(BASE_PATH + 'audio/alert.wav'))  # 음악 로딩
+guideSound = pygame.mixer.Sound(os.path.abspath(BASE_PATH + "audio/start_guide_wav.wav"))  # 안내 음성
+tuningSound = pygame.mixer.Sound(os.path.abspath(BASE_PATH + "audio/tuning_1.wav"))  # 튜닝 음성
 
 # Minimum threshold of eye aspect ratio below which alarm is triggerd
 # 눈의 EAR의 THRESH 기본값을 0.3으로 설정
@@ -42,8 +44,8 @@ tuningDic = {"USER_ID": 0, "EYE_ASPECT_RATIO_THRESHOLD": 0, "MOUTH_THRESHOLD": 0
 # Minimum consecutive frames for which eye ratio is below threshold for alarm to be triggered
 EYE_ASPECT_RATIO_CONSEC_FRAMES = 5  # 연속 눈 감기 검출을 위한 기준 시간(프레임)
 MOUTH_FRAMES = 10  # 하품 검출위한 기준 시간(프레임)
-TUNING_FRAMES = 60  # 사용자별 튜닝 기준 시간
-EYE_STANDARD_TIME = 40  # 정상적인 눈깜빡임 빈도 계산을 위한 기준 시간
+TUNING_FRAMES = 200  # 사용자별 튜닝 기준 시간(10초)
+EYE_STANDARD_TIME = 100  # 정상적인 눈깜빡임 빈도 계산을 위한 기준 시간(5초)
 
 # 눈깜빡임 여부 리스트(0: 눈뜸, 눈감음)
 eye_numList = [0 for i in range(EYE_STANDARD_TIME)]  # 전부 0으로 초기화
@@ -66,7 +68,7 @@ COUNTER_MOUTH = 0
 
 # Load face cascade which will be used to draw a rectangle around detected faces.
 # 얼굴 인식: 정면 얼굴에 대한 Haar_Cascade 학습 데이터 (직사각형 그리는 용도)
-face_cascade = cv2.CascadeClassifier(os.path.abspath("haarcascades/haarcascade_frontalface_default.xml"))
+face_cascade = cv2.CascadeClassifier(os.path.abspath(BASE_PATH + "haarcascades/haarcascade_frontalface_default.xml"))
 
 
 # 눈 종횡비(EAR) 계산 함수
@@ -106,13 +108,13 @@ def head_rate(head):
 # 파일에 userData 쓰기 함수
 def write_user_file(user_id):
     # 파일에 쓰기
-    userFile = "./user_data/" + str(user_id) + ".txt"
+    userFile = os.path.abspath(BASE_PATH + "user_data/" + str(user_id) + ".txt")
     with open(userFile, 'wb') as fw:
         pickle.dump(tuningDic, fw)  # 값 추가
         
 def read_user_file(user_id):
     # 파일 읽기
-    userFile = "./user_data/" + str(user_id) + ".txt"
+    userFile = os.path.abspath(BASE_PATH + "user_data/" + str(user_id) + ".txt")
     with open(userFile, 'rb') as fr:
         tuningDic = pickle.load(fr)
         #print(tuningDic)  # 읽어온 데이터
@@ -122,7 +124,7 @@ def read_user_file(user_id):
 # Load face detector and predictor, uses dlib shape predictor file
 # 68개의 얼굴 랜드마크 추출
 detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor(os.path.abspath('shape_predictor_68_face_landmarks.dat'))
+predictor = dlib.shape_predictor(os.path.abspath(BASE_PATH + 'shape_predictor_68_face_landmarks.dat'))
 
 # Extract indexes of facial landmarks for the left and right eye
 # 위에서 추출한 랜드마크에서 왼쪽 눈과 오른쪽 눈의 랜드마크 좌표 추출
@@ -131,13 +133,42 @@ predictor = dlib.shape_predictor(os.path.abspath('shape_predictor_68_face_landma
 # 랜드마크에서 입 좌표 추출
 (mStart, mEnd) = 48, 68
 
-video_file = "./video/test5.mp4"
+video_file = os.path.abspath(BASE_PATH + "video/test12.avi")
 # Start webcam video capture
 # 첫번째(0) 카메라를 VideoCapture 타입의 객체로 얻어옴\
 #video_capture = cv2.VideoCapture(0)
-video_capture = cv2.VideoCapture(video_file)
+#video_capture = cv2.VideoCapture(video_file)
+mode = 0    # 파일/실시간 시연 모드
 
+def clickFileBtn(app):
+    global mode
+    # 읽어들일 시연 파일명 적어주세요
+    mode = os.path.abspath(BASE_PATH + "video/test12.avi")
+    app.destroy()
 
+def clickRealTimeBtn(app):
+    global mode
+    # 노트북 카메라번호(내장캠:0, 웹캠: 1)
+    mode = 0
+    app.destroy()
+
+# 실시간/파일 영상 처리 설정
+def settingMode():
+    app = tk.Tk()  # GUI 생성
+    app.title("drowsiness-detection")  # 상단의 타이틀 지정
+    app.geometry('100x50')  # 크기 설정(w * h)
+
+    enrollButton = tk.Button(app, text="파일", width=5, command=lambda:clickFileBtn(app))  # 윈도우에 버튼 생성
+    enrollButton.place(x=0, y=0)  # 윈도우 상 절대위치에 배치
+
+    buttonE = tk.Button(app, text="실시간", width=5, command=lambda:clickRealTimeBtn(app))
+    buttonE.place(x=50, y=0)
+
+    app.mainloop()
+    
+settingMode() # 실행 모드 정하기
+
+video_capture = cv2.VideoCapture(mode)
 # Give some time for camera to initialize(not required)
 time.sleep(2)
 
@@ -149,14 +180,15 @@ drowsiness_level = 0
 
 # 현재시각
 currentTime = time.strftime("%Y%m%d_%H%M%S")
-outputFileName = os.path.abspath("./output/" + currentTime + ".avi")
-outputImageName = "./graphImage/" + currentTime + ".png"
+outputFileName = os.path.abspath(BASE_PATH + "output/" + currentTime + ".avi")
+outputImageName = os.path.abspath(BASE_PATH + "graphImage/" + currentTime + ".png")
 
 # 웹캠의 속성 값을 받아오기
 # 정수 형태로 변환하기 위해 round
 w = round(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
 h = round(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 fps = video_capture.get(cv2.CAP_PROP_FPS)  # 카메라에 따라 값이 정상적, 비정상적
+#print(video_capture.get(cv2.CAP_PROP_FRAME_COUNT))
 
 print(fps)  # 30.0
 
@@ -165,7 +197,7 @@ fourcc = cv2.VideoWriter_fourcc(*'DIVX')
 
 # 1프레임과 다음 프레임 사이의 간격 설정
 delay = round(1000 / fps)
-print(delay)
+#print(delay)
 
 # 웹캠으로 찰영한 영상을 저장하기
 # cv2.VideoWriter 객체 생성, 기존에 받아온 속성값 입력
@@ -195,7 +227,7 @@ graphTitle = ["eye", "mouth", "head"]
 FIRST_YAWN = 0  # 첫 번째 하품
 SECOND_YAWN = 0 # 두 번째 하품
 
-userNum = len(os.listdir(os.path.abspath("./user_data")))  # 등록된 사용자 수
+userNum = len(os.listdir(os.path.abspath(BASE_PATH + "user_data")))  # 등록된 사용자 수
 
 ######################################
 # gui 생성 부분
@@ -238,27 +270,16 @@ label2.pack()
 
 #app.mainloop()
 """
-
-"""
-app = tk.Tk()           #GUI 생성
-app.title("drowsiness-detection") #상단의 타이틀 지정
-app.geometry('300x300') #크기 설정(w * h)
-
-enrollButton = tk.Button(app, text="등록", width=5)    # 윈도우에 버튼 생성
-enrollButton.place(x=0, y=0)   # 윈도우 상 절대위치에 배치
-
-buttonE = tk.Button(app, text="시작", width=5)
-buttonE.place(x=50, y=0)
-
-"""
-
 while (True):
-
-    print(state)
     # Read each frame and flip it, and convert to grayscale
     # ret : frame capture결과(boolean)
     # frame : Capture한 frame
     ret, frame = video_capture.read()  # 비디오 읽기
+
+    #파일 다읽으면 종료하기 위해서
+    if(ret == False):
+        break
+
     frame = cv2.flip(frame, 1)  # 프레임 좌우반전(flipcode > 0)
     # BGR 이미지: / GrayScale 이미지: 색상정보X,밝기 정보로만 구성(0~255, 검~흰)
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # color space 변환(BGR->Grayscale로 변환)
@@ -274,16 +295,18 @@ while (True):
     currentTime = time.strftime("%Y-%m-%d %H:%M:%S")
     cv2.putText(frame, currentTime, (5, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
+    #print(cv2.CAP_PROP_FPS)
+
     # 키보드 입력으로 시작하기
     if (state == 0):
-        # 등록된 사용자가 0명일 경우
+        # 등록된 사용자가 0명일 경우 자동 튜닝 단계로
         if(userNum == 0):
             # s버튼을 누르면 튜닝 단계로
-            if (cv2.waitKey(1) == ord('s')):
-                state = 1  # 시작 상태로 변경
-                guideSound.play()  # 안내음성 출력
-                time.sleep(5)
-                startTime = datetime.now()  # 현재 시각 저장
+            #if (cv2.waitKey(1) == ord('s')):
+            state = 1  # 시작 상태로 변경
+            guideSound.play()  # 안내음성 출력
+            time.sleep(5)
+            startTime = datetime.now()  # 현재 시각 저장
         else:
         # 등록된 사용자가 1명이상일 경우,
             #user_id = input()
@@ -447,8 +470,10 @@ while (True):
                     EYE_COUNTER = 0
                     eye_numList[frameIdx] = 0  # 눈 뜸
 
-                eye_number = EYE_STANDARD_TIME - eye_numList.count(0)  # 눈깜빡임 횟수 카운팅
 
+                eye_number = EYE_STANDARD_TIME - eye_numList.count(0)  # 눈깜빡임 횟수 카운팅
+                if (EYE_COUNTER > 2):
+                    eye_number -= EYE_COUNTER
                 # print(eye_numList)  # 기준 시간 내 눈을 몇번 얼마나 감았는지 기록
 
                 # 졸음 단계 변경 부분(2프레임에 한번씩 검사)
@@ -460,7 +485,7 @@ while (True):
                     elif (drowsiness_level == 2 and EYE_COUNTER == 0):
                         # 눈 감고 있다가 뜰 경우 바로 평상시 단계로 변경하기 위해
                         drowsiness_level = 0  # 평상시 단계로 변경
-                    elif (eye_number >= tuningDic["EYE_STANDARD_NUMBER"] * 1.3):
+                    elif (eye_number >= tuningDic["EYE_STANDARD_NUMBER"] * 1.5):
                         drowsiness_level = 1  # 졸음 전조 단계로 변경
 
 
@@ -616,6 +641,7 @@ while (True):
     cv2.moveWindow(winname='Video', x=0, y=100)  # 특정 위치에 띄우기
     cv2.imshow('Video', frame)
 
+
     #app.mainloop()
 
     # 키보드 입력으로 중지시키기
@@ -624,7 +650,6 @@ while (True):
         plt.savefig(outputImageName)  # 그래프 이미지 저장
         # plt.show()
         break
-
 
 
 # Finally when video capture is over, release the video capture and destroyAllWindows

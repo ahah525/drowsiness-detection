@@ -17,12 +17,13 @@ import tkinter as tk
 import tkinter.ttk
 
 # exe 실행시: ../ #파이참 실행시:
-BASE_PATH = ""
+BASE_PATH = "../"
 # Initialize Pygame and load music(wav 파일 지원)
 pygame.mixer.init()  # 믹서 모듈의 초기화 함수
 pygame.mixer.music.load(os.path.abspath(BASE_PATH + 'audio/alert.wav'))  # 음악 로딩
 guideSound = pygame.mixer.Sound(os.path.abspath(BASE_PATH + "audio/start_guide_wav.wav"))  # 안내 음성
 tuningSound = pygame.mixer.Sound(os.path.abspath(BASE_PATH + "audio/tuning_1.wav"))  # 튜닝 음성
+secondAlert = pygame.mixer.Sound(os.path.abspath(BASE_PATH + "audio/alert3.wav"))
 
 # Minimum threshold of eye aspect ratio below which alarm is triggerd
 # 눈의 EAR의 THRESH 기본값을 0.3으로 설정
@@ -45,7 +46,7 @@ tuningDic = {"USER_ID": 0, "EYE_ASPECT_RATIO_THRESHOLD": 0, "MOUTH_THRESHOLD": 0
 EYE_ASPECT_RATIO_CONSEC_FRAMES = 5  # 연속 눈 감기 검출을 위한 기준 시간(프레임)
 MOUTH_FRAMES = 10  # 하품 검출위한 기준 시간(프레임)
 TUNING_FRAMES = 200  # 사용자별 튜닝 기준 시간(10초)
-EYE_STANDARD_TIME = 100  # 정상적인 눈깜빡임 빈도 계산을 위한 기준 시간(5초)
+EYE_STANDARD_TIME = 40  # 정상적인 눈깜빡임 빈도 계산을 위한 기준 시간(4초)
 
 # 눈깜빡임 여부 리스트(0: 눈뜸, 눈감음)
 eye_numList = [0 for i in range(EYE_STANDARD_TIME)]  # 전부 0으로 초기화
@@ -201,7 +202,10 @@ delay = round(1000 / fps)
 
 # 웹캠으로 찰영한 영상을 저장하기
 # cv2.VideoWriter 객체 생성, 기존에 받아온 속성값 입력
-out = cv2.VideoWriter(outputFileName, fourcc, fps / 10, (w, h))
+SAVE_VIDEO_FPS = fps
+if(mode == 0):
+    SAVE_VIDEO_FPS /= 10
+out = cv2.VideoWriter(outputFileName, fourcc, SAVE_VIDEO_FPS, (w, h))
 
 X = 0
 
@@ -373,7 +377,7 @@ while (True):
             # 입 경계선 그리기
             cv2.drawContours(frame, [innerMouthHull], -1, (0, 255, 0), 1)
 
-            print(tuningDic)  # 읽어온 데이터
+            #(tuningDic)  # 읽어온 데이터
             # 좌측 상단 기준 text 표시
             # 상태 표시
             cv2.putText(frame, "drowsy_level : {:d}".format(drowsiness_level+1), (0, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
@@ -445,6 +449,7 @@ while (True):
                     # plt.scatter(X, eyeAspectRatio)
                     ax[i].plot(dataY[i])
 
+
                 plt.tight_layout()  # 그래프 겹치지 않게 Axes 조절
                 plt.pause(0.000000001)
 
@@ -472,21 +477,21 @@ while (True):
 
 
                 eye_number = EYE_STANDARD_TIME - eye_numList.count(0)  # 눈깜빡임 횟수 카운팅
+                """
                 if (EYE_COUNTER > 2):
                     eye_number -= EYE_COUNTER
-                # print(eye_numList)  # 기준 시간 내 눈을 몇번 얼마나 감았는지 기록
-
+                print(eye_numList)  # 기준 시간 내 눈을 몇번 얼마나 감았는지 기록
+                """
                 # 졸음 단계 변경 부분(2프레임에 한번씩 검사)
                 if (THIRD_FRAME % 2 == 0):
                     # 연속 눈 감기(10Frame)
                     if (EYE_COUNTER > EYE_ASPECT_RATIO_CONSEC_FRAMES):
-                        print("눈감음")
+                        #print("눈 계속 감음")
                         drowsiness_level = 2  # 졸음 단계로 변경
-                    elif (drowsiness_level == 2 and EYE_COUNTER == 0):
-                        # 눈 감고 있다가 뜰 경우 바로 평상시 단계로 변경하기 위해
-                        drowsiness_level = 0  # 평상시 단계로 변경
                     elif (eye_number >= tuningDic["EYE_STANDARD_NUMBER"] * 1.5):
                         drowsiness_level = 1  # 졸음 전조 단계로 변경
+                    elif (eye_number < tuningDic["EYE_STANDARD_NUMBER"] * 1.5):
+                        drowsiness_level = 0  # 졸음 전조 단계로 변경
 
 
 
@@ -531,10 +536,18 @@ while (True):
                 # 졸음 단계별 사운드 조절
                 if (drowsiness_level == 0):
                     pygame.mixer.music.stop()  # 소리 출력 정지
+                    if(THIRD_FRAME % 5 != 0):
+                        secondAlert.stop()
                 elif (drowsiness_level == 1):
+                    pygame.mixer.music.stop()  # 소리 출력 정지
                     # 졸음 전조 단계이면
-                    # pygame.mixer.music.play(-1)
                     cv2.putText(frame, "2 LEVEL", (150, 200), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
+                    
+                    # 경고음 주기 조절(더 느리게 하고 싶으면 숫자 키우면 됨)
+                    if(THIRD_FRAME % 5 == 0):
+                        secondAlert.play()
+                    else:
+                        secondAlert.stop()
                 elif (drowsiness_level == 2):
                     # 졸음 단계 이면
                     pygame.mixer.music.play(-1)
@@ -622,7 +635,7 @@ while (True):
                 # 딕셔너리에 저장
                 tuningDic["HEAD_DOWN_THRESHOLD"] = round(sum(headList) / len(headList), 3)
                 tuningDic["MOUTH_THRESHOLD"] = round(sum(mouthList) / len(mouthList), 3)
-                tuningDic["EYE_STANDARD_NUMBER"] = round(tuningDic["EYE_STANDARD_NUMBER"] * EYE_STANDARD_TIME / TUNING_FRAMES, 1)
+                tuningDic["EYE_STANDARD_NUMBER"] = round(tuningDic["EYE_STANDARD_NUMBER"] * EYE_STANDARD_TIME / TUNING_FRAMES * 2, 1)
                 tuningDic["EYE_ASPECT_RATIO_THRESHOLD"] = round(eye_sum / (len(eyeList) - tuningDic["EYE_STANDARD_NUMBER"]), 3)
                 tuningDic["USER_ID"] = 0 #0번
 

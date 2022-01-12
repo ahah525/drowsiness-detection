@@ -306,11 +306,11 @@ while (True):
         # 등록된 사용자가 0명일 경우 자동 튜닝 단계로
         if(userNum == 0):
             # s버튼을 누르면 튜닝 단계로
-            #if (cv2.waitKey(1) == ord('s')):
-            state = 1  # 시작 상태로 변경
-            guideSound.play()  # 안내음성 출력
-            time.sleep(5)
-            startTime = datetime.now()  # 현재 시각 저장
+            if (cv2.waitKey(1) == ord('s')):
+                state = 1  # 시작 상태로 변경
+                guideSound.play()  # 안내음성 출력
+                time.sleep(5)
+                startTime = datetime.now()  # 현재 시각 저장
         else:
         # 등록된 사용자가 1명이상일 경우,
             #user_id = input()
